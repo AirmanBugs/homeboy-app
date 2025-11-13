@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { language, type Language } from '$lib/stores/language';
+	import { settings } from '$lib/stores/settings';
 	import { t } from '$lib/i18n/translations';
 
 	interface Props {
@@ -10,9 +11,14 @@
 	let { isOpen, onClose }: Props = $props();
 
 	const currentLang = $derived($language);
+	const currentSettings = $derived($settings);
 
 	const handleLanguageChange = (lang: Language) => {
 		language.set(lang);
+	};
+
+	const handleNowcastChange = (minutes: number) => {
+		settings.update(s => ({ ...s, nowcastMinutes: minutes }));
 	};
 
 	const handleBackdropClick = (e: MouseEvent) => {
@@ -20,6 +26,8 @@
 			onClose();
 		}
 	};
+
+	const nowcastOptions = [60, 90, 120];
 </script>
 
 {#if isOpen}
@@ -117,6 +125,24 @@
 								</svg>
 							{/if}
 						</button>
+					</div>
+				</div>
+
+				<!-- Precipitation Graph Window -->
+				<div>
+					<h3 class="text-xl font-semibold mb-4 text-white">{t(currentLang, 'precipitationWindow')}</h3>
+					<div class="flex gap-2">
+						{#each nowcastOptions as minutes}
+							<button
+								onclick={() => handleNowcastChange(minutes)}
+								class="flex-1 px-4 py-3 rounded-lg border-2 transition-all {currentSettings.nowcastMinutes ===
+								minutes
+									? 'bg-blue-500/20 border-blue-500 text-white'
+									: 'bg-slate-700/30 border-slate-600 text-slate-300 hover:border-slate-500'}"
+							>
+								{minutes} {t(currentLang, 'minutes')}
+							</button>
+						{/each}
 					</div>
 				</div>
 			</div>

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import Settings from '$lib/components/Settings.svelte';
+	import Weather from '$lib/components/Weather.svelte';
 	import { language } from '$lib/stores/language';
 	import { t } from '$lib/i18n/translations';
 
@@ -78,13 +79,13 @@
 
 		<!-- Main dashboard grid -->
 		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-			<!-- Weather widget placeholder -->
-			<div class="bg-slate-800/50 backdrop-blur rounded-2xl p-6 border border-slate-700">
+			<!-- Weather widget -->
+			<div class="bg-slate-800/50 backdrop-blur rounded-2xl p-6 border border-slate-700 flex flex-col">
 				<h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
 					<span>🌤️</span>
 					{t(currentLang, 'weather')}
 				</h2>
-				<p class="text-slate-400">{t(currentLang, 'weatherComingSoon')}</p>
+				<Weather />
 			</div>
 
 			<!-- Calendar widget placeholder -->

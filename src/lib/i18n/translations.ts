@@ -13,6 +13,10 @@ type Translations = {
 	english: string;
 	norwegian: string;
 	close: string;
+	precipitationGraph: string;
+	precipitationWindow: string;
+	minutes: string;
+	usingDefaultLocation: string;
 };
 
 export const translations: Record<Language, Translations> = {
@@ -28,7 +32,11 @@ export const translations: Record<Language, Translations> = {
 		language: 'Language',
 		english: 'English',
 		norwegian: 'Norwegian',
-		close: 'Close'
+		close: 'Close',
+		precipitationGraph: 'Precipitation Graph',
+		precipitationWindow: 'Precipitation forecast window',
+		minutes: 'minutes',
+		usingDefaultLocation: 'Using default location (Oslo)'
 	},
 	no: {
 		title: 'HomeBoy - Din personlige dashboard',
@@ -42,7 +50,11 @@ export const translations: Record<Language, Translations> = {
 		language: 'Språk',
 		english: 'Engelsk',
 		norwegian: 'Norsk',
-		close: 'Lukk'
+		close: 'Lukk',
+		precipitationGraph: 'Nedbørsgraf',
+		precipitationWindow: 'Nedbørsvarsling',
+		minutes: 'minutter',
+		usingDefaultLocation: 'Bruker standardplassering (Oslo)'
 	}
 };
 
