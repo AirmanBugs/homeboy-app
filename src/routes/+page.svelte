@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import Settings from '$lib/components/Settings.svelte';
 	import Weather from '$lib/components/Weather.svelte';
+	import Calendar from '$lib/components/Calendar.svelte';
 	import { language } from '$lib/stores/language';
 	import { t } from '$lib/i18n/translations';
 
@@ -39,18 +40,18 @@
 	<title>{t(currentLang, 'title')}</title>
 </svelte:head>
 
-<div class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white p-8">
-	<div class="max-w-6xl mx-auto">
+<div class="h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white p-4 md:p-6 lg:p-8 overflow-hidden flex flex-col">
+	<div class="max-w-7xl mx-auto w-full flex flex-col h-full">
 		<!-- Settings button -->
-		<div class="flex justify-end mb-4">
+		<div class="flex justify-end mb-2 flex-shrink-0">
 			<button
 				onclick={() => (isSettingsOpen = true)}
-				class="p-3 rounded-full bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700 transition-colors"
+				class="p-2 md:p-3 rounded-full bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700 transition-colors"
 				aria-label={t(currentLang, 'settings')}
 			>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
-					class="h-6 w-6"
+					class="h-5 w-5 md:h-6 md:w-6"
 					fill="none"
 					viewBox="0 0 24 24"
 					stroke="currentColor"
@@ -72,34 +73,38 @@
 		</div>
 
 		<!-- Header with date and time -->
-		<header class="mb-12 text-center">
-			<h1 class="text-6xl font-bold mb-4">{formattedTime}</h1>
-			<p class="text-2xl text-slate-300">{formattedDate}</p>
+		<header class="mb-4 md:mb-6 lg:mb-8 text-center flex-shrink-0">
+			<h1 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-2">{formattedTime}</h1>
+			<p class="text-lg md:text-xl lg:text-2xl text-slate-300">{formattedDate}</p>
 		</header>
 
 		<!-- Main dashboard grid -->
-		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 flex-1 min-h-0">
 			<!-- Weather widget -->
-			<div class="bg-slate-800/50 backdrop-blur rounded-2xl p-6 border border-slate-700 flex flex-col">
-				<h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
+			<div class="bg-slate-800/50 backdrop-blur rounded-2xl p-4 md:p-6 border border-slate-700 flex flex-col min-h-0">
+				<h2 class="text-lg md:text-xl font-semibold mb-3 md:mb-4 flex items-center gap-2 flex-shrink-0">
 					<span>🌤️</span>
 					{t(currentLang, 'weather')}
 				</h2>
-				<Weather />
+				<div class="flex-1 min-h-0">
+					<Weather />
+				</div>
 			</div>
 
-			<!-- Calendar widget placeholder -->
-			<div class="bg-slate-800/50 backdrop-blur rounded-2xl p-6 border border-slate-700">
-				<h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
+			<!-- Calendar widget -->
+			<div class="bg-slate-800/50 backdrop-blur rounded-2xl p-4 md:p-6 border border-slate-700 flex flex-col min-h-0">
+				<h2 class="text-lg md:text-xl font-semibold mb-3 md:mb-4 flex items-center gap-2 flex-shrink-0">
 					<span>📅</span>
 					{t(currentLang, 'upcomingEvents')}
 				</h2>
-				<p class="text-slate-400">{t(currentLang, 'calendarComingSoon')}</p>
+				<div class="flex-1 min-h-0">
+					<Calendar />
+				</div>
 			</div>
 
 			<!-- Commute widget placeholder -->
-			<div class="bg-slate-800/50 backdrop-blur rounded-2xl p-6 border border-slate-700">
-				<h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
+			<div class="bg-slate-800/50 backdrop-blur rounded-2xl p-4 md:p-6 border border-slate-700 flex flex-col min-h-0">
+				<h2 class="text-lg md:text-xl font-semibold mb-3 md:mb-4 flex items-center gap-2 flex-shrink-0">
 					<span>🚇</span>
 					{t(currentLang, 'commuteInfo')}
 				</h2>

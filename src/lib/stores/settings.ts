@@ -3,10 +3,12 @@ import { browser } from '$app/environment';
 
 export interface Settings {
 	nowcastMinutes: number;
+	enabledCalendars: string[]; // Array of calendar IDs that are enabled
 }
 
 const defaultSettings: Settings = {
-	nowcastMinutes: 90
+	nowcastMinutes: 90,
+	enabledCalendars: [] // Empty means all calendars are enabled by default
 };
 
 const getInitialSettings = (): Settings => {
