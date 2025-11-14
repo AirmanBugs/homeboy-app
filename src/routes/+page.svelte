@@ -2,13 +2,16 @@
 	import { onMount } from 'svelte';
 	import Settings from '$lib/components/Settings.svelte';
 	import Weather from '$lib/components/Weather.svelte';
+	import DynamicBackground from '$lib/components/DynamicBackground.svelte';
 	import { language } from '$lib/stores/language';
+	import { weatherStore } from '$lib/stores/weather';
 	import { t } from '$lib/i18n/translations';
 
 	let currentTime = $state(new Date());
 	let isSettingsOpen = $state(false);
 
 	const currentLang = $derived($language);
+	const weather = $derived($weatherStore);
 
 	onMount(() => {
 		const interval = setInterval(() => {
@@ -39,8 +42,21 @@
 	<title>{t(currentLang, 'title')}</title>
 </svelte:head>
 
-<div class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white p-8">
-	<div class="max-w-6xl mx-auto">
+<!-- Dynamic Background -->
+{#if weather.location && weather.data}
+	<DynamicBackground
+		lat={weather.location.lat}
+		lon={weather.location.lon}
+		weather={{
+			symbolCode: weather.data.current.symbolCode,
+			precipitation: weather.data.current.precipitation,
+			cloudCover: weather.data.current.cloudCover
+		}}
+	/>
+{/if}
+
+<div class="min-h-screen text-white p-8">
+	<div class="max-w-6xl mx-auto relative">
 		<!-- Settings button -->
 		<div class="flex justify-end mb-4">
 			<button

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { WeatherData } from '$lib/types/weather';
 	import { language } from '$lib/stores/language';
+	import { setWeatherData, setWeatherLocation } from '$lib/stores/weather';
 	import { t } from '$lib/i18n/translations';
 	import { onMount } from 'svelte';
 	import PrecipitationGraph from './PrecipitationGraph.svelte';
@@ -92,6 +93,12 @@
 			weatherData = await response.json();
 			currentCoords = { lat, lon };
 			lastFetch = new Date();
+
+			// Update global weather store
+			if (weatherData) {
+				setWeatherData(weatherData);
+				setWeatherLocation(lat, lon);
+			}
 		} catch (err) {
 			if (!silent) {
 				error = currentLang === 'en' ? 'Failed to load weather' : 'Kunne ikke laste værdata';
