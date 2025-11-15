@@ -17,6 +17,7 @@ type Translations = {
 	precipitationWindow: string;
 	minutes: string;
 	usingDefaultLocation: string;
+	weatherRadar: string;
 };
 
 export const translations: Record<Language, Translations> = {
@@ -36,7 +37,8 @@ export const translations: Record<Language, Translations> = {
 		precipitationGraph: 'Precipitation Graph',
 		precipitationWindow: 'Precipitation forecast window',
 		minutes: 'minutes',
-		usingDefaultLocation: 'Using default location (Oslo)'
+		usingDefaultLocation: 'Using default location (Oslo)',
+		weatherRadar: 'Weather Radar'
 	},
 	no: {
 		title: 'HomeBoy - Din personlige dashboard',
@@ -54,7 +56,8 @@ export const translations: Record<Language, Translations> = {
 		precipitationGraph: 'Nedbørsgraf',
 		precipitationWindow: 'Nedbørsvarsling',
 		minutes: 'minutter',
-		usingDefaultLocation: 'Bruker standardplassering (Oslo)'
+		usingDefaultLocation: 'Bruker standardplassering (Oslo)',
+		weatherRadar: 'Værradar'
 	}
 };
 

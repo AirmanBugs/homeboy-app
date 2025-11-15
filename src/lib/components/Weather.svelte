@@ -4,6 +4,7 @@
 	import { t } from '$lib/i18n/translations';
 	import { onMount } from 'svelte';
 	import PrecipitationGraph from './PrecipitationGraph.svelte';
+	import RadarMap from './RadarMap.svelte';
 
 	let weatherData = $state<WeatherData | null>(null);
 	let loading = $state(true);
@@ -208,6 +209,11 @@
 		<div class="mb-4 p-4 bg-slate-700/30 border border-slate-600 rounded-xl">
 			<h3 class="text-sm font-semibold mb-3 text-slate-300">{t(currentLang, 'precipitationGraph')}</h3>
 			<PrecipitationGraph lat={weatherData.location.lat} lon={weatherData.location.lon} />
+		</div>
+
+		<!-- Weather Radar -->
+		<div class="mb-4">
+			<RadarMap />
 		</div>
 
 		<!-- Current Details -->

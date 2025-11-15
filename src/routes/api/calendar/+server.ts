@@ -164,9 +164,6 @@ export const GET: RequestHandler = async ({ cookies }) => {
 			calendars.map(async (cal) => {
 				if (!cal.id) return;
 
-				// Log calendar info to debug
-				console.log(`Fetching calendar: ${cal.summary} (${cal.id}) - Color: ${cal.backgroundColor}`);
-
 				try {
 					const eventsResponse = await calendar.events.list({
 						calendarId: cal.id,
