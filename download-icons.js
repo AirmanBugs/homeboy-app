@@ -60,6 +60,21 @@ const icons = [
 
   // Astro
   "horizon",
+
+  // Beaufort wind scale
+  "wind-beaufort-0",
+  "wind-beaufort-1",
+  "wind-beaufort-2",
+  "wind-beaufort-3",
+  "wind-beaufort-4",
+  "wind-beaufort-5",
+  "wind-beaufort-6",
+  "wind-beaufort-7",
+  "wind-beaufort-8",
+  "wind-beaufort-9",
+  "wind-beaufort-10",
+  "wind-beaufort-11",
+  "wind-beaufort-12",
 ];
 
 await mkdir("./static/icons", { recursive: true });

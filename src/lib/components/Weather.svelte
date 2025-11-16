@@ -29,9 +29,21 @@
   // Refresh every 10 minutes (MET Norway recommends not more frequent than this)
   const REFRESH_INTERVAL = 10 * 60 * 1000; // 10 minutes in milliseconds
 
-  // Get wind arrow rotation - arrow points in direction wind is blowing TO
-  const getWindArrowRotation = (degrees: number): number => {
-    return degrees + 180; // Add 180 because wind direction is where it comes FROM
+  // Get Beaufort scale icon based on wind speed (m/s)
+  const getBeaufortIcon = (windSpeed: number): string => {
+    if (windSpeed < 0.5) return "wind-beaufort-0"; // Calm
+    if (windSpeed < 1.6) return "wind-beaufort-1"; // Light air
+    if (windSpeed < 3.4) return "wind-beaufort-2"; // Light breeze
+    if (windSpeed < 5.5) return "wind-beaufort-3"; // Gentle breeze
+    if (windSpeed < 8.0) return "wind-beaufort-4"; // Moderate breeze
+    if (windSpeed < 10.8) return "wind-beaufort-5"; // Fresh breeze
+    if (windSpeed < 13.9) return "wind-beaufort-6"; // Strong breeze
+    if (windSpeed < 17.2) return "wind-beaufort-7"; // Near gale
+    if (windSpeed < 20.8) return "wind-beaufort-8"; // Gale
+    if (windSpeed < 24.5) return "wind-beaufort-9"; // Strong gale
+    if (windSpeed < 28.5) return "wind-beaufort-10"; // Storm
+    if (windSpeed < 32.7) return "wind-beaufort-11"; // Violent storm
+    return "wind-beaufort-12"; // Hurricane
   };
 
   // Format numbers with proper locale-specific decimal separator
@@ -168,7 +180,7 @@
 
     return [
       {
-        icon: "wind-arrow",
+        icon: getBeaufortIcon(weatherData.current.windSpeed),
         value: weatherData.current.windSpeed,
         label: currentLang === "en" ? "Wind speed" : "Vindhastighet",
         format: (v: number) => formatNumber(v, 1),
@@ -378,21 +390,7 @@
             title={detail.label}
           >
             <span class="flex items-center justify-center flex-shrink-0">
-              {#if detail.icon === "wind-arrow"}
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="h-8 w-8 {getWindColor(weatherData.current.windSpeed)}"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                  style="transform: rotate({getWindArrowRotation(
-                    weatherData.current.windDirection
-                  )}deg)"
-                >
-                  <path d="M12 2l-8 8h5v10h6V10h5z" />
-                </svg>
-              {:else}
-                <WeatherIcon icon={detail.icon} size={50} />
-              {/if}
+              <WeatherIcon icon={detail.icon} size={50} />
             </span>
             <span class="text-slate-100 text-left font-semibold text-2xl"
               >{detail.format(detail.value)}</span
@@ -470,17 +468,7 @@
             {Math.round(hour.temperature)}°
           </div>
           <div class="flex items-center gap-0.5 text-xs text-slate-400">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="h-3 w-3"
-              fill="currentColor"
-              viewBox="0 0 24 24"
-              style="transform: rotate({getWindArrowRotation(
-                hour.windDirection
-              )}deg)"
-            >
-              <path d="M12 2l-8 8h5v10h6V10h5z" />
-            </svg>
+            <WeatherIcon icon={getBeaufortIcon(hour.windSpeed)} size={16} />
             <span>{formatNumber(hour.windSpeed, 1)}</span>
           </div>
           {#if hour.precipitation > 0}
