@@ -1,320 +1,414 @@
 <script lang="ts">
-	import type { WeatherData } from '$lib/types/weather';
-	import { language } from '$lib/stores/language';
-	import { t } from '$lib/i18n/translations';
-	import { onMount } from 'svelte';
-	import PrecipitationGraph from './PrecipitationGraph.svelte';
-	import RadarMap from './RadarMap.svelte';
+  import type { WeatherData } from "$lib/types/weather";
+  import { language } from "$lib/stores/language";
+  import { t } from "$lib/i18n/translations";
+  import { onMount } from "svelte";
+  import PrecipitationGraph from "./PrecipitationGraph.svelte";
+  import RadarMap from "./RadarMap.svelte";
+  import WeatherIcon from "./WeatherIcon.svelte";
+  import {
+    getWeatherIconName,
+    getUVIndexIconName,
+    getMoonPhaseIconName,
+  } from "$lib/utils/weatherIconMap";
 
-	let weatherData = $state<WeatherData | null>(null);
-	let loading = $state(true);
-	let error = $state<string | null>(null);
-	let lastFetch = $state<Date | null>(null);
-	let currentCoords = $state<{ lat: number; lon: number } | null>(null);
-	let usingDefaultLocation = $state(true);
+  let weatherData = $state<WeatherData | null>(null);
+  let loading = $state(true);
+  let error = $state<string | null>(null);
+  let lastFetch = $state<Date | null>(null);
+  let currentCoords = $state<{ lat: number; lon: number } | null>(null);
+  let usingDefaultLocation = $state(true);
+  let moonPhase = $state<number | null>(null);
 
-	const currentLang = $derived($language);
+  const currentLang = $derived($language);
 
-	// Default to Oslo
-	const DEFAULT_LAT = 59.9139;
-	const DEFAULT_LON = 10.7522;
+  // Default to Oslo
+  const DEFAULT_LAT = 59.9139;
+  const DEFAULT_LON = 10.7522;
 
-	// Refresh every 10 minutes (MET Norway recommends not more frequent than this)
-	const REFRESH_INTERVAL = 10 * 60 * 1000; // 10 minutes in milliseconds
+  // Refresh every 10 minutes (MET Norway recommends not more frequent than this)
+  const REFRESH_INTERVAL = 10 * 60 * 1000; // 10 minutes in milliseconds
 
-	// Map MET weather symbols to emojis
-	const getWeatherEmoji = (symbolCode: string): string => {
-		if (symbolCode.includes('clearsky')) return '☀️';
-		if (symbolCode.includes('fair')) return '🌤️';
-		if (symbolCode.includes('partlycloudy')) return '⛅';
-		if (symbolCode.includes('cloudy')) return '☁️';
-		if (symbolCode.includes('rain')) return '🌧️';
-		if (symbolCode.includes('snow')) return '❄️';
-		if (symbolCode.includes('sleet')) return '🌨️';
-		if (symbolCode.includes('thunder')) return '⛈️';
-		if (symbolCode.includes('fog')) return '🌫️';
-		return '🌤️';
-	};
+  // Get wind arrow rotation - arrow points in direction wind is blowing TO
+  const getWindArrowRotation = (degrees: number): number => {
+    return degrees + 180; // Add 180 because wind direction is where it comes FROM
+  };
 
-	// Get wind arrow rotation - arrow points in direction wind is blowing TO
-	const getWindArrowRotation = (degrees: number): number => {
-		return degrees + 180; // Add 180 because wind direction is where it comes FROM
-	};
+  // Format numbers with proper locale-specific decimal separator
+  const formatNumber = (value: number, decimals: number = 0): string => {
+    const locale = currentLang === "no" ? "nb-NO" : "en-US";
+    return new Intl.NumberFormat(locale, {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+    }).format(value);
+  };
 
-	// Update time display every minute
-	let currentTime = $state(new Date());
+  // Get wind arrow color based on wind speed (Beaufort scale approximation)
+  const getWindColor = (windSpeed: number): string => {
+    if (windSpeed < 2) return "text-slate-500"; // Calm
+    if (windSpeed < 4) return "text-blue-400"; // Light breeze
+    if (windSpeed < 7) return "text-yellow-400"; // Moderate
+    if (windSpeed < 10) return "text-orange-400"; // Fresh
+    return "text-red-400"; // Strong
+  };
 
-	const getTimeSinceUpdate = $derived.by(() => {
-		if (!lastFetch) return '';
-		// Force reactivity by referencing currentTime
-		currentTime;
-		const now = new Date();
-		const diffMs = now.getTime() - lastFetch.getTime();
-		const diffMins = Math.floor(diffMs / 60000);
+  // Update time display every minute
+  let currentTime = $state(new Date());
 
-		if (diffMins < 1) {
-			return currentLang === 'en' ? 'Just now' : 'Akkurat nå';
-		} else if (diffMins === 1) {
-			return currentLang === 'en' ? '1 min ago' : '1 min siden';
-		} else {
-			return currentLang === 'en' ? `${diffMins} mins ago` : `${diffMins} min siden`;
-		}
-	});
+  const getTimeSinceUpdate = $derived.by(() => {
+    if (!lastFetch) return "";
+    // Force reactivity by referencing currentTime
+    currentTime;
+    const now = new Date();
+    const diffMs = now.getTime() - lastFetch.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
 
-	// Get precipitation summary for next 6 hours
-	const getPrecipitationSummary = $derived.by(() => {
-		if (!weatherData) return null;
-		const totalPrecip = weatherData.forecast.slice(0, 6).reduce((sum, h) => sum + h.precipitation, 0);
-		if (totalPrecip === 0) return null;
+    if (diffMins < 1) {
+      return currentLang === "en" ? "Just now" : "Akkurat nå";
+    } else if (diffMins === 1) {
+      return currentLang === "en" ? "1 min ago" : "1 min siden";
+    } else {
+      return currentLang === "en"
+        ? `${diffMins} mins ago`
+        : `${diffMins} min siden`;
+    }
+  });
 
-		const rainHours = weatherData.forecast.slice(0, 6).filter(h => h.precipitation > 0);
-		if (rainHours.length === 0) return null;
+  // Get precipitation summary for next 6 hours
+  const getPrecipitationSummary = $derived.by(() => {
+    if (!weatherData) return null;
+    const totalPrecip = weatherData.forecast
+      .slice(0, 6)
+      .reduce((sum, h) => sum + h.precipitation, 0);
+    if (totalPrecip === 0) return null;
 
-		const firstRain = rainHours[0];
-		const firstHour = new Date(firstRain.time).getHours();
+    const rainHours = weatherData.forecast
+      .slice(0, 6)
+      .filter((h) => h.precipitation > 0);
+    if (rainHours.length === 0) return null;
 
-		return {
-			total: totalPrecip,
-			firstHour,
-			count: rainHours.length
-		};
-	});
+    const firstRain = rainHours[0];
+    const firstHour = new Date(firstRain.time).getHours();
 
-	const fetchWeather = async (lat: number, lon: number, silent: boolean = false) => {
-		try {
-			if (!silent) loading = true;
-			error = null;
-			const response = await fetch(`/api/weather?lat=${lat}&lon=${lon}`);
+    return {
+      total: totalPrecip,
+      firstHour,
+      count: rainHours.length,
+    };
+  });
 
-			if (!response.ok) {
-				throw new Error('Failed to fetch weather');
-			}
+  // Weather details grid data
+  const weatherDetails = $derived.by(() => {
+    if (!weatherData) return [];
 
-			weatherData = await response.json();
-			currentCoords = { lat, lon };
-			lastFetch = new Date();
-		} catch (err) {
-			if (!silent) {
-				error = currentLang === 'en' ? 'Failed to load weather' : 'Kunne ikke laste værdata';
-			}
-			console.error('Weather fetch error:', err);
-		} finally {
-			if (!silent) loading = false;
-		}
-	};
+    return [
+      {
+        icon: "wind-arrow",
+        value: weatherData.current.windSpeed,
+        label: currentLang === "en" ? "Wind speed" : "Vindhastighet",
+        format: (v: number) => formatNumber(v, 1),
+      },
+      {
+        icon: "cloudy",
+        value: Math.round(weatherData.current.cloudCover),
+        label: currentLang === "en" ? "Cloud coverage" : "Skydekke",
+        format: (v: number) => v.toString(),
+      },
+      {
+        icon: "raindrop",
+        value: weatherData.current.precipitation,
+        label:
+          currentLang === "en"
+            ? "Precipitation next hour"
+            : "Nedbør neste time",
+        format: (v: number) => formatNumber(v, 1),
+      },
+      {
+        icon: "humidity",
+        value: weatherData.current.humidity,
+        label:
+          currentLang === "en" ? "Relative humidity" : "Relativ luftfuktighet",
+        format: (v: number) => Math.round(v).toString(),
+      },
+      {
+        icon: getUVIndexIconName(weatherData.current.uvIndex),
+        value: weatherData.current.uvIndex,
+        label: currentLang === "en" ? "UV Index" : "UV-indeks",
+        format: (v: number) => Math.round(v).toString(),
+      },
+      ...(moonPhase !== null
+        ? [
+            {
+              icon: getMoonPhaseIconName(moonPhase),
+              value: moonPhase * 100,
+              label: currentLang === "en" ? "Moon phase" : "Månefase",
+              format: (v: number) => Math.round(v).toString(),
+            },
+          ]
+        : []),
+    ];
+  });
 
-	const refreshWeather = () => {
-		if (currentCoords) {
-			// Silent refresh - don't show loading spinner
-			fetchWeather(currentCoords.lat, currentCoords.lon, true);
-		}
-	};
+  const fetchWeather = async (
+    lat: number,
+    lon: number,
+    silent: boolean = false
+  ) => {
+    try {
+      if (!silent) loading = true;
+      error = null;
+      const response = await fetch(`/api/weather?lat=${lat}&lon=${lon}`);
 
-	const requestLocation = () => {
-		if (!navigator.geolocation) {
-			return;
-		}
+      if (!response.ok) {
+        throw new Error("Failed to fetch weather");
+      }
 
-		// Try to get actual location in the background
-		navigator.geolocation.getCurrentPosition(
-			(position) => {
-				usingDefaultLocation = false;
-				fetchWeather(position.coords.latitude, position.coords.longitude, true);
-			},
-			(err) => {
-				console.log('Geolocation unavailable, using default location:', err.message);
-				// Keep using default location, don't show error
-			},
-			{
-				enableHighAccuracy: false,
-				timeout: 10000,
-				maximumAge: 300000 // Cache for 5 minutes
-			}
-		);
-	};
+      weatherData = await response.json();
+      currentCoords = { lat, lon };
+      lastFetch = new Date();
 
-	onMount(() => {
-		// Start with Oslo immediately
-		fetchWeather(DEFAULT_LAT, DEFAULT_LON);
+      // Fetch moon phase in the background
+      fetchMoonPhase(lat, lon);
+    } catch (err) {
+      if (!silent) {
+        error =
+          currentLang === "en"
+            ? "Failed to load weather"
+            : "Kunne ikke laste værdata";
+      }
+      console.error("Weather fetch error:", err);
+    } finally {
+      if (!silent) loading = false;
+    }
+  };
 
-		// Try to get actual location in background
-		requestLocation();
+  const fetchMoonPhase = async (lat: number, lon: number) => {
+    try {
+      const response = await fetch(`/api/moon?lat=${lat}&lon=${lon}`);
+      if (response.ok) {
+        const data = await response.json();
+        moonPhase = data.moonPhase;
+      }
+    } catch (err) {
+      console.error("Moon phase fetch error:", err);
+      // Don't show error to user, moon phase is optional
+    }
+  };
 
-		// Update current time every minute for "time since update" display
-		const timeInterval = setInterval(() => {
-			currentTime = new Date();
-		}, 60000);
+  const refreshWeather = () => {
+    if (currentCoords) {
+      // Silent refresh - don't show loading spinner
+      fetchWeather(currentCoords.lat, currentCoords.lon, true);
+    }
+  };
 
-		// Set up auto-refresh every 10 minutes
-		const refreshInterval = setInterval(() => {
-			refreshWeather();
-		}, REFRESH_INTERVAL);
+  const requestLocation = () => {
+    if (!navigator.geolocation) {
+      return;
+    }
 
-		// Cleanup intervals on component unmount
-		return () => {
-			clearInterval(timeInterval);
-			clearInterval(refreshInterval);
-		};
-	});
+    // Try to get actual location in the background
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        usingDefaultLocation = false;
+        fetchWeather(position.coords.latitude, position.coords.longitude, true);
+      },
+      (err) => {
+        console.log(
+          "Geolocation unavailable, using default location:",
+          err.message
+        );
+        // Keep using default location, don't show error
+      },
+      {
+        enableHighAccuracy: false,
+        timeout: 10000,
+        maximumAge: 300000, // Cache for 5 minutes
+      }
+    );
+  };
+
+  onMount(() => {
+    // Start with Oslo immediately
+    fetchWeather(DEFAULT_LAT, DEFAULT_LON);
+
+    // Try to get actual location in background
+    requestLocation();
+
+    // Update current time every minute for "time since update" display
+    const timeInterval = setInterval(() => {
+      currentTime = new Date();
+    }, 60000);
+
+    // Set up auto-refresh every 10 minutes
+    const refreshInterval = setInterval(() => {
+      refreshWeather();
+    }, REFRESH_INTERVAL);
+
+    // Cleanup intervals on component unmount
+    return () => {
+      clearInterval(timeInterval);
+      clearInterval(refreshInterval);
+    };
+  });
 </script>
 
-<div class="h-full flex flex-col">
-	{#if loading}
-		<div class="flex items-center justify-center h-full">
-			<div class="text-slate-400">
-				{currentLang === 'en' ? 'Loading weather...' : 'Laster værdata...'}
-			</div>
-		</div>
-	{:else if weatherData}
-		<!-- Location indicator -->
-		{#if usingDefaultLocation}
-			<div class="mb-3 text-xs text-slate-500 flex items-center gap-1">
-				<span>📍</span>
-				{t(currentLang, 'usingDefaultLocation')}
-			</div>
-		{/if}
-		<!-- Current Weather -->
-		<div class="flex items-center justify-between mb-4">
-			<div>
-				<div class="text-5xl font-bold">{Math.round(weatherData.current.temperature)}°</div>
-				<div class="text-sm text-slate-400 mt-1">
-					{currentLang === 'en' ? 'Feels like' : 'Føles som'} {Math.round(weatherData.current.temperature)}°
-				</div>
-			</div>
-			<div
-				class="text-6xl cursor-help"
-				title={weatherData.current.symbolCode.replace(/_/g, ' ').replace(/day|night/g, '').trim()}
-			>
-				{getWeatherEmoji(weatherData.current.symbolCode)}
-			</div>
-		</div>
+<div class="h-full flex flex-col gap-2">
+  {#if loading}
+    <div class="flex items-center justify-center h-full">
+      <div class="text-slate-400">
+        {currentLang === "en" ? "Loading weather..." : "Laster værdata..."}
+      </div>
+    </div>
+  {:else if weatherData}
+    <!-- Current Weather -->
+    <div class="flex items-center justify-between">
+      <!-- Temperature and weather type -->
+      <div class="flex items-center gap-1">
+        <!-- Temperature -->
+        <div class="flex-shrink-0">
+          <div class="text-4xl font-bold leading-none text-center">
+            {Math.round(weatherData.current.temperature)}°
+          </div>
+          <div class="text-2xl text-slate-400 mt-1">--°</div>
+        </div>
 
-		<!-- Precipitation Alert -->
-		{#if getPrecipitationSummary}
-			<div class="mb-4 p-3 bg-blue-500/20 border border-blue-500/30 rounded-lg">
-				<div class="flex items-center gap-2 text-sm">
-					<span class="text-lg">💧</span>
-					<span class="text-blue-200">
-						{#if currentLang === 'en'}
-							{getPrecipitationSummary.total.toFixed(1)}mm rain expected (starting around {getPrecipitationSummary.firstHour}:00)
-						{:else}
-							{getPrecipitationSummary.total.toFixed(1)}mm regn ventet (starter rundt {getPrecipitationSummary.firstHour}:00)
-						{/if}
-					</span>
-				</div>
-			</div>
-		{/if}
+        <!-- Weather Symbol -->
+        <div
+          class="w-14 h-14 flex items-center justify-center cursor-help flex-shrink-0 overflow-hidden"
+          title={weatherData.current.symbolCode
+            .replace(/_/g, " ")
+            .replace(/day|night/g, "")
+            .trim()}
+        >
+          <WeatherIcon
+            icon={getWeatherIconName(weatherData.current.symbolCode)}
+            size={56}
+          />
+        </div>
+      </div>
 
-		<!-- Precipitation Graph -->
-		<div class="mb-4 p-4 bg-slate-700/30 border border-slate-600 rounded-xl">
-			<h3 class="text-sm font-semibold mb-3 text-slate-300">{t(currentLang, 'precipitationGraph')}</h3>
-			<PrecipitationGraph lat={weatherData.location.lat} lon={weatherData.location.lon} />
-		</div>
+      <!-- Weather Details Grid -->
+      <div
+        class="grid grid-cols-3 grid-rows-2 grid-flow-col gap-x-6 gap-y-2 text-lg min-w-[100px]"
+      >
+        {#each weatherDetails as detail}
+          <div
+            class="flex items-center justify-between cursor-help"
+            title={detail.label}
+          >
+            <span class="flex items-center justify-center flex-shrink-0">
+              {#if detail.icon === "wind-arrow"}
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-8 w-8 {getWindColor(weatherData.current.windSpeed)}"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                  style="transform: rotate({getWindArrowRotation(
+                    weatherData.current.windDirection
+                  )}deg)"
+                >
+                  <path d="M12 2l-8 8h5v10h6V10h5z" />
+                </svg>
+              {:else}
+                <WeatherIcon icon={detail.icon} size={50} />
+              {/if}
+            </span>
+            <span class="text-slate-100 text-left font-semibold text-2xl"
+              >{detail.format(detail.value)}</span
+            >
+          </div>
+        {/each}
+      </div>
+    </div>
 
-		<!-- Weather Radar -->
-		<div class="mb-4">
-			<RadarMap />
-		</div>
+    <!-- Fog alert if present -->
+    {#if weatherData.current.fog > 0}
+      <div class="mb-4 p-2 bg-slate-700/30 border border-slate-600 rounded-lg">
+        <div
+          class="flex items-center gap-2 text-sm cursor-help"
+          title={currentLang === "en" ? "Fog coverage" : "Tåkedekke"}
+        >
+          <WeatherIcon icon="fog" size={24} />
+          <span class="text-slate-300">
+            {currentLang === "en" ? "Fog" : "Tåke"}
+            {Math.round(weatherData.current.fog)}%
+          </span>
+        </div>
+      </div>
+    {/if}
 
-		<!-- Current Details -->
-		<div class="grid grid-cols-2 gap-3 mb-4 text-sm">
-			<div
-				class="flex items-center gap-2 cursor-help"
-				title={currentLang === 'en' ? 'Wind speed and direction' : 'Vindhastighet og retning'}
-			>
-				<span>💨</span>
-				<span class="text-slate-300 flex items-center gap-1">
-					{weatherData.current.windSpeed} m/s
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						class="h-4 w-4 text-slate-400"
-						fill="currentColor"
-						viewBox="0 0 24 24"
-						style="transform: rotate({getWindArrowRotation(weatherData.current.windDirection)}deg)"
-					>
-						<path d="M12 2l-8 8h5v10h6V10h5z" />
-					</svg>
-				</span>
-			</div>
-			<div
-				class="flex items-center gap-2 cursor-help"
-				title={currentLang === 'en' ? 'Cloud coverage' : 'Skydekke'}
-			>
-				<span>☁️</span>
-				<span class="text-slate-300">{Math.round(weatherData.current.cloudCover)}%</span>
-			</div>
-			<div
-				class="flex items-center gap-2 cursor-help"
-				title={currentLang === 'en' ? 'Precipitation next hour' : 'Nedbør neste time'}
-			>
-				<span>💧</span>
-				<span class="text-slate-300">{weatherData.current.precipitation} mm</span>
-			</div>
-			<div
-				class="flex items-center gap-2 cursor-help"
-				title={currentLang === 'en' ? 'Relative humidity' : 'Relativ luftfuktighet'}
-			>
-				<span>💦</span>
-				<span class="text-slate-300">{Math.round(weatherData.current.humidity)}%</span>
-			</div>
-			{#if weatherData.current.fog > 0}
-				<div
-					class="flex items-center gap-2 col-span-2 cursor-help"
-					title={currentLang === 'en' ? 'Fog coverage' : 'Tåkedekke'}
-				>
-					<span>🌫️</span>
-					<span class="text-slate-300">
-						{currentLang === 'en' ? 'Fog' : 'Tåke'} {Math.round(weatherData.current.fog)}%
-					</span>
-				</div>
-			{/if}
-		</div>
+    <!-- Precipitation Alert -->
+    {#if getPrecipitationSummary}
+      <div class="mb-4 p-3 bg-blue-500/20 border border-blue-500/30 rounded-lg">
+        <div class="flex items-center gap-2 text-sm">
+          <WeatherIcon icon="raindrop" size={20} />
+          <span class="text-blue-200">
+            {#if currentLang === "en"}
+              {formatNumber(getPrecipitationSummary.total, 1)}mm rain expected
+              (starting around {getPrecipitationSummary.firstHour}:00)
+            {:else}
+              {formatNumber(getPrecipitationSummary.total, 1)}mm regn ventet
+              (starter rundt {getPrecipitationSummary.firstHour}:00)
+            {/if}
+          </span>
+        </div>
+      </div>
+    {/if}
 
-		<!-- Forecast -->
-		<div class="mt-auto pt-4 border-t border-slate-700">
-			<div class="flex justify-between items-center mb-2">
-				<div class="text-xs font-semibold text-slate-400">
-					{currentLang === 'en' ? 'Next 6 hours' : 'Neste 6 timer'}
-				</div>
-				{#if lastFetch}
-					<div class="text-xs text-slate-500">
-						{getTimeSinceUpdate}
-					</div>
-				{/if}
-			</div>
-			<div class="flex gap-2 overflow-x-auto pb-1">
-				{#each weatherData.forecast.slice(0, 6) as hour}
-					<div
-						class="flex flex-col items-center min-w-[56px] cursor-help"
-						title={currentLang === 'en'
-							? `${new Date(hour.time).getHours()}:00 - ${Math.round(hour.temperature)}°C, Wind: ${hour.windSpeed}m/s${hour.precipitation > 0 ? `, Rain: ${hour.precipitation}mm` : ''}`
-							: `${new Date(hour.time).getHours()}:00 - ${Math.round(hour.temperature)}°C, Vind: ${hour.windSpeed}m/s${hour.precipitation > 0 ? `, Regn: ${hour.precipitation}mm` : ''}`}
-					>
-						<div class="text-xs text-slate-400">
-							{new Date(hour.time).getHours()}:00
-						</div>
-						<div class="text-2xl my-1">{getWeatherEmoji(hour.symbolCode)}</div>
-						<div class="text-sm font-semibold">{Math.round(hour.temperature)}°</div>
-						<div class="flex items-center gap-0.5 text-xs text-slate-400">
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								class="h-3 w-3"
-								fill="currentColor"
-								viewBox="0 0 24 24"
-								style="transform: rotate({getWindArrowRotation(hour.windDirection)}deg)"
-							>
-								<path d="M12 2l-8 8h5v10h6V10h5z" />
-							</svg>
-							<span>{hour.windSpeed.toFixed(1)}</span>
-						</div>
-						{#if hour.precipitation > 0}
-							<div class="text-xs text-blue-300 flex items-center gap-0.5">
-								<span>💧</span>{hour.precipitation}mm
-							</div>
-						{/if}
-					</div>
-				{/each}
-			</div>
-		</div>
-	{/if}
+    <!-- Precipitation Graph -->
+    <div class="p-4 bg-slate-700/30 border border-slate-600 rounded-xl">
+      <PrecipitationGraph
+        lat={weatherData.location.lat}
+        lon={weatherData.location.lon}
+      />
+    </div>
+
+    <!-- Weather Radar -->
+    <div>
+      <RadarMap />
+    </div>
+
+    <!-- Forecast -->
+    <div class="flex gap-2 overflow-x-auto pb-1">
+      {#each weatherData.forecast.slice(0, 6) as hour}
+        <div
+          class="flex flex-col items-center min-w-[56px] cursor-help"
+          title={currentLang === "en"
+            ? `${new Date(hour.time).getHours()}:00 - ${Math.round(hour.temperature)}°C, Wind: ${formatNumber(hour.windSpeed, 1)}m/s${hour.precipitation > 0 ? `, Rain: ${formatNumber(hour.precipitation, 1)}mm` : ""}`
+            : `${new Date(hour.time).getHours()}:00 - ${Math.round(hour.temperature)}°C, Vind: ${formatNumber(hour.windSpeed, 1)}m/s${hour.precipitation > 0 ? `, Regn: ${formatNumber(hour.precipitation, 1)}mm` : ""}`}
+        >
+          <div class="text-xs text-slate-400">
+            {new Date(hour.time).getHours()}:00
+          </div>
+          <WeatherIcon icon={getWeatherIconName(hour.symbolCode)} size={32} />
+          <div class="text-sm font-semibold">
+            {Math.round(hour.temperature)}°
+          </div>
+          <div class="flex items-center gap-0.5 text-xs text-slate-400">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-3 w-3"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+              style="transform: rotate({getWindArrowRotation(
+                hour.windDirection
+              )}deg)"
+            >
+              <path d="M12 2l-8 8h5v10h6V10h5z" />
+            </svg>
+            <span>{formatNumber(hour.windSpeed, 1)}</span>
+          </div>
+          {#if hour.precipitation > 0}
+            <div class="text-xs text-blue-300 flex items-center gap-0.5">
+              <WeatherIcon icon="raindrop" size={12} />{formatNumber(
+                hour.precipitation,
+                1
+              )}
+            </div>
+          {/if}
+        </div>
+      {/each}
+    </div>
+  {/if}
 </div>

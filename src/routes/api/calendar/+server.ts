@@ -155,7 +155,6 @@ export const GET: RequestHandler = async ({ cookies }) => {
 		});
 		const calendars = calendarList.data.items || [];
 
-		const defaultColors = parseCalendarColors();
 		const now = new Date().toISOString();
 		const allEvents: CalendarEvent[] = [];
 

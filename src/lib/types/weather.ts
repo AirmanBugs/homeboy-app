@@ -56,6 +56,7 @@ export interface InstantDetails {
 	wind_speed: number;
 	precipitation_amount?: number;
 	fog_area_fraction?: number;
+	ultraviolet_index_clear_sky?: number;
 }
 
 // Simplified weather data for our UI
@@ -69,6 +70,7 @@ export interface WeatherData {
 		humidity: number;
 		precipitation: number;
 		fog: number;
+		uvIndex: number;
 	};
 	forecast: ForecastHour[];
 	location: {
@@ -76,6 +78,7 @@ export interface WeatherData {
 		lon: number;
 	};
 	updatedAt: string;
+	moonPhase?: number; // 0-1 representing moon phase (0=new, 0.5=full)
 }
 
 export interface ForecastHour {

@@ -70,7 +70,8 @@ function transformWeatherData(
 			cloudCover: current.data.instant.details.cloud_area_fraction,
 			humidity: current.data.instant.details.relative_humidity,
 			precipitation: current.data.next_1_hours?.details.precipitation_amount || 0,
-			fog: current.data.instant.details.fog_area_fraction || 0
+			fog: current.data.instant.details.fog_area_fraction || 0,
+			uvIndex: current.data.instant.details.ultraviolet_index_clear_sky || 0
 		},
 		forecast,
 		location: { lat, lon },
