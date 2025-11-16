@@ -55,7 +55,9 @@
 		tomorrow.setDate(tomorrow.getDate() + 1);
 
 		// Calculate days until end of this week (Sunday)
-		const daysUntilSunday = 7 - today.getDay();
+		// Treat Monday as day 0 and Sunday as day 6
+		const dayOfWeek = (today.getDay() + 6) % 7; // Monday = 0, Sunday = 6
+		const daysUntilSunday = 6 - dayOfWeek;
 		const endOfWeek = new Date(today);
 		endOfWeek.setDate(today.getDate() + daysUntilSunday);
 
