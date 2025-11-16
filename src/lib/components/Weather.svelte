@@ -52,6 +52,61 @@
     return "text-red-400"; // Strong
   };
 
+  // Calculate realfeel temperature (feels-like temperature)
+  const calculateRealfeel = (
+    temp: number,
+    windSpeed: number,
+    humidity: number
+  ): number => {
+    // For temperatures below 10°C, use wind chill
+    if (temp < 10) {
+      // Wind chill formula (metric)
+      const windKmh = windSpeed * 3.6; // Convert m/s to km/h
+      if (windKmh > 4.8) {
+        const windChill =
+          13.12 +
+          0.6215 * temp -
+          11.37 * Math.pow(windKmh, 0.16) +
+          0.3965 * temp * Math.pow(windKmh, 0.16);
+        return windChill;
+      }
+    }
+
+    // For temperatures above 20°C, use heat index
+    if (temp > 20) {
+      // Heat index formula
+      const T = temp;
+      const RH = humidity;
+
+      const HI =
+        -8.78469475556 +
+        1.61139411 * T +
+        2.33854883889 * RH +
+        -0.14611605 * T * RH +
+        -0.012308094 * T * T +
+        -0.0164248277778 * RH * RH +
+        0.002211732 * T * T * RH +
+        0.00072546 * T * RH * RH +
+        -0.000003582 * T * T * RH * RH;
+
+      if (HI > temp) return HI;
+    }
+
+    // For moderate temperatures or low wind, just apply a small wind adjustment
+    return temp - windSpeed * 0.5;
+  };
+
+  // Get temperature color based on value
+  const getTempColor = (temp: number): string => {
+    if (temp <= -10) return "from-blue-600 to-blue-400";
+    if (temp <= 0) return "from-cyan-600 to-cyan-400";
+    if (temp <= 10) return "from-sky-500 to-sky-300";
+    if (temp <= 20) return "from-green-500 to-green-300";
+    if (temp <= 25) return "from-yellow-500 to-yellow-300";
+    if (temp <= 30) return "from-orange-500 to-orange-300";
+    return "from-red-600 to-red-400";
+  };
+
   // Update time display every minute
   let currentTime = $state(new Date());
 
@@ -95,6 +150,16 @@
       firstHour,
       count: rainHours.length,
     };
+  });
+
+  // Calculate realfeel temperature
+  const realfeel = $derived.by(() => {
+    if (!weatherData) return null;
+    return calculateRealfeel(
+      weatherData.current.temperature,
+      weatherData.current.windSpeed,
+      weatherData.current.humidity
+    );
   });
 
   // Weather details grid data
@@ -267,10 +332,25 @@
       <div class="flex items-center gap-1">
         <!-- Temperature -->
         <div class="flex-shrink-0">
-          <div class="text-4xl font-bold leading-none text-center">
+          <div
+            class="text-4xl font-bold leading-none text-center bg-gradient-to-br {getTempColor(
+              weatherData.current.temperature
+            )} bg-clip-text text-transparent"
+          >
             {Math.round(weatherData.current.temperature)}°
           </div>
-          <div class="text-2xl text-slate-400 mt-1">--°</div>
+          {#if realfeel !== null}
+            <div
+              class="text-4xl font-bold mt-1 bg-gradient-to-br {getTempColor(
+                realfeel
+              )} bg-clip-text text-transparent opacity-80"
+              title={currentLang === "en"
+                ? "Feels like temperature"
+                : "Føles som temperatur"}
+            >
+              {Math.round(realfeel)}°
+            </div>
+          {/if}
         </div>
 
         <!-- Weather Symbol -->
@@ -382,7 +462,11 @@
             {new Date(hour.time).getHours()}:00
           </div>
           <WeatherIcon icon={getWeatherIconName(hour.symbolCode)} size={32} />
-          <div class="text-sm font-semibold">
+          <div
+            class="text-sm font-semibold bg-gradient-to-br {getTempColor(
+              hour.temperature
+            )} bg-clip-text text-transparent"
+          >
             {Math.round(hour.temperature)}°
           </div>
           <div class="flex items-center gap-0.5 text-xs text-slate-400">
