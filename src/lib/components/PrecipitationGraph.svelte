@@ -1,6 +1,8 @@
 <script lang="ts">
   import { language } from "$lib/stores/language";
   import { settings } from "$lib/stores/settings";
+  import Weather from "./Weather.svelte";
+  import WeatherIcon from "./WeatherIcon.svelte";
 
   interface Props {
     lat: number;
@@ -95,7 +97,7 @@
     <div
       class="py-6 text-center text-slate-300 flex items-center justify-center gap-2"
     >
-      <span class="text-2xl">☀️</span>
+      <WeatherIcon icon="clear-day" size={24} />
       <span
         >{currentLang === "en"
           ? "No rain expected"
