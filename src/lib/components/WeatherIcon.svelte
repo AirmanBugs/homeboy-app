@@ -1,6 +1,9 @@
-<script lang="ts">
-  import { onMount } from "svelte";
+<script lang="ts" module>
+  // Cache for loaded SVGs (shared across all instances)
+  const svgCache = new Map<string, string>();
+</script>
 
+<script lang="ts">
   interface Props {
     icon: string;
     size?: number;
@@ -12,55 +15,66 @@
   let svgContent = $state<string>("");
   let loading = $state(true);
   let error = $state(false);
+  let currentIcon = $state<string>("");
 
-  const loadIcon = async () => {
+  const loadIcon = async (iconName: string, isInitialLoad: boolean = false) => {
     try {
-      loading = true;
+      // Only show loading state on initial load
+      if (isInitialLoad) {
+        loading = true;
+      }
       error = false;
 
+      // Check cache first
+      if (svgCache.has(iconName)) {
+        svgContent = svgCache.get(iconName)!;
+        currentIcon = iconName;
+        if (isInitialLoad) loading = false;
+        return;
+      }
+
       // Load from local static folder
-      const url = `/icons/${icon}.svg`;
-      console.log(`🔄 Loading icon from: ${url}`);
+      const url = `/icons/${iconName}.svg`;
 
       const response = await fetch(url);
 
       if (!response.ok) {
-        console.error(`❌ Failed to load icon "${icon}": ${response.status} ${response.statusText}`);
-        console.error(`   Full URL: ${window.location.origin}${url}`);
-        throw new Error(`Failed to load icon: ${icon}`);
+        console.error(`❌ Failed to load icon "${iconName}": ${response.status} ${response.statusText}`);
+        throw new Error(`Failed to load icon: ${iconName}`);
       }
 
       let svg = await response.text();
-      console.log(`📄 Loaded SVG for ${icon}, length: ${svg.length} chars`);
 
       // Make symbol IDs unique to prevent conflicts
       // Meteocons use generic IDs like "a", "b" which collide when multiple SVGs are on the page
       const uniqueId = Math.random().toString(36).substr(2, 9);
       // First, replace all id attributes
-      svg = svg.replace(/\sid="([^"]+)"/g, ` id="${icon}-${uniqueId}-$1"`);
+      svg = svg.replace(/\sid="([^"]+)"/g, ` id="${iconName}-${uniqueId}-$1"`);
       // Then replace references (order matters - do xlink:href before href to avoid double-matching)
-      svg = svg.replace(/xlink:href="#([^"]+)"/g, `xlink:href="#${icon}-${uniqueId}-$1"`);
-      svg = svg.replace(/\shref="#([^"]+)"/g, ` href="#${icon}-${uniqueId}-$1"`);
-      svg = svg.replace(/url\(#([^)]+)\)/g, `url(#${icon}-${uniqueId}-$1)`);
+      svg = svg.replace(/xlink:href="#([^"]+)"/g, `xlink:href="#${iconName}-${uniqueId}-$1"`);
+      svg = svg.replace(/\shref="#([^"]+)"/g, ` href="#${iconName}-${uniqueId}-$1"`);
+      svg = svg.replace(/url\(#([^)]+)\)/g, `url(#${iconName}-${uniqueId}-$1)`);
+
+      // Cache the processed SVG
+      svgCache.set(iconName, svg);
 
       svgContent = svg;
-      console.log(`✅ Icon ready: ${icon}`);
+      currentIcon = iconName;
     } catch (err) {
-      console.error(`❌ Error loading weather icon "${icon}":`, err);
+      console.error(`❌ Error loading weather icon "${iconName}":`, err);
       error = true;
     } finally {
-      loading = false;
+      if (isInitialLoad) {
+        loading = false;
+      }
     }
   };
 
-  onMount(() => {
-    loadIcon();
-  });
-
-  // Reload icon when icon prop changes
+  // Load icon when it changes
   $effect(() => {
-    icon;
-    loadIcon();
+    if (icon !== currentIcon) {
+      loadIcon(icon, currentIcon === "");
+    }
   });
 </script>
 
@@ -95,9 +109,4 @@
     max-width: 100%;
     max-height: 100%;
   }
-
-  /* Debug: add a border to see the container */
-  /* .weather-icon {
-    border: 1px solid red;
-  } */
 </style>

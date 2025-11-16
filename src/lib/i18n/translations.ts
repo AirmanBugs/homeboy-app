@@ -18,6 +18,19 @@ type Translations = {
 	minutes: string;
 	usingDefaultLocation: string;
 	weatherRadar: string;
+	dayLength: string;
+	ago: string;
+	hour: string;
+	minute: string;
+	// Compass directions
+	N: string;
+	NE: string;
+	E: string;
+	SE: string;
+	S: string;
+	SW: string;
+	W: string;
+	NW: string;
 };
 
 export const translations: Record<Language, Translations> = {
@@ -38,7 +51,20 @@ export const translations: Record<Language, Translations> = {
 		precipitationWindow: 'Precipitation forecast window',
 		minutes: 'minutes',
 		usingDefaultLocation: 'Using default location (Oslo)',
-		weatherRadar: 'Weather Radar'
+		weatherRadar: 'Weather Radar',
+		dayLength: 'Day length',
+		ago: 'ago',
+		hour: 'h',
+		minute: 'm',
+		// Compass directions
+		N: 'N',
+		NE: 'NE',
+		E: 'E',
+		SE: 'SE',
+		S: 'S',
+		SW: 'SW',
+		W: 'W',
+		NW: 'NW'
 	},
 	no: {
 		title: 'HomeBoy - Din personlige dashboard',
@@ -57,7 +83,20 @@ export const translations: Record<Language, Translations> = {
 		precipitationWindow: 'Nedbørsvarsling',
 		minutes: 'minutter',
 		usingDefaultLocation: 'Bruker standardplassering (Oslo)',
-		weatherRadar: 'Værradar'
+		weatherRadar: 'Værradar',
+		dayLength: 'Daglengde',
+		ago: 'siden',
+		hour: 't',
+		minute: 'm',
+		// Compass directions
+		N: 'N',
+		NE: 'NØ',
+		E: 'Ø',
+		SE: 'SØ',
+		S: 'S',
+		SW: 'SV',
+		W: 'V',
+		NW: 'NV'
 	}
 };
 
