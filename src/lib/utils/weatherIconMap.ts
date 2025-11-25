@@ -62,10 +62,10 @@ export function getWeatherIconName(symbolCode: string): string {
 
 /**
  * Gets the UV index icon name based on UV value
- * Meteocons has UV index icons from 1-11
+ * Meteocons has UV index icons from 1-11, we added 0 for no UV exposure
  */
 export function getUVIndexIconName(uvIndex: number): string {
-  const roundedUV = Math.round(Math.max(1, Math.min(11, uvIndex)));
+  const roundedUV = Math.round(Math.max(0, Math.min(11, uvIndex)));
   return `uv-index-${roundedUV}`;
 }
 
