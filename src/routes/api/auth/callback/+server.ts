@@ -1,4 +1,4 @@
-import { redirect } from '@sveltejs/kit';
+import { redirect, isRedirect } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { createOAuth2Client, getTokenFromCode } from '$lib/server/google-auth';
 import { storeTokens } from '$lib/server/token-store';
@@ -28,6 +28,10 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 
 		throw redirect(302, '/?auth=success');
 	} catch (error) {
+		// Don't log redirects as errors (they're part of normal flow)
+		if (isRedirect(error)) {
+			throw error;
+		}
 		console.error('OAuth callback error:', error);
 		throw redirect(302, '/?error=auth_failed');
 	}

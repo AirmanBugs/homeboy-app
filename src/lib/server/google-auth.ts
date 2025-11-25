@@ -15,8 +15,9 @@ export function createOAuth2Client(): OAuth2Client {
 export function getAuthUrl(oauth2Client: OAuth2Client): string {
 	return oauth2Client.generateAuthUrl({
 		access_type: 'offline',
-		scope: SCOPES,
-		prompt: 'consent'
+		scope: SCOPES
+		// Removed 'prompt: consent' to reuse existing refresh tokens
+		// and avoid hitting Google's 50 token limit per user
 	});
 }
 

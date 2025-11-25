@@ -212,8 +212,19 @@ export const GET: RequestHandler = async ({ cookies }) => {
 		};
 
 		return json(calendarData);
-	} catch (error) {
+	} catch (error: any) {
 		console.error('Calendar API error:', error);
+
+		// Check if the error is due to invalid/expired refresh token
+		if (error?.code === 400 && error?.message?.includes('invalid_grant')) {
+			// Clear the invalid tokens
+			cookies.delete('google_tokens', { path: '/' });
+			return json({
+				error: 'Authentication expired. Please sign in again.',
+				needsAuth: true
+			}, { status: 401 });
+		}
+
 		return json({ error: 'Failed to fetch calendar data' }, { status: 500 });
 	}
 };
