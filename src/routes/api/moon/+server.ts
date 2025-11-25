@@ -5,14 +5,8 @@ const USER_AGENT = "HomeBoy/1.0 mariusmbang@gmail.com";
 const MET_SUNRISE_URL = "https://api.met.no/weatherapi/sunrise/3.0/moon";
 
 interface MoonPhaseResponse {
-  location: {
-    time: Array<{
-      date: string;
-      moonphase: {
-        value: string;
-        desc: string;
-      };
-    }>;
+  properties: {
+    moonphase: number;
   };
 }
 
@@ -41,25 +35,26 @@ export const GET: RequestHandler = async ({ url }) => {
       throw new Error(`MET Sunrise API returned ${response.status}`);
     }
 
-    const data = await response.json();
+    const data: MoonPhaseResponse = await response.json();
 
-    // Extract moon phase value (0-1, where 0=new moon, 0.5=full moon)
-    // Handle different possible response structures
-    const timeData = data?.location?.time;
-    if (!timeData || !Array.isArray(timeData) || timeData.length === 0) {
+    // Extract moon phase value from properties.moonphase
+    // API returns percentage (0-100), convert to 0-1 range
+    const moonPhasePercentage = data?.properties?.moonphase;
+
+    if (moonPhasePercentage === undefined || moonPhasePercentage === null) {
       console.error("Unexpected moon phase response structure:", data);
-      // Return default value instead of erroring
       return json({
         moonPhase: 0,
         description: "Unknown",
       });
     }
 
-    const moonPhaseValue = parseFloat(timeData[0]?.moonphase?.value || "0");
+    // Convert from percentage (0-100) to fraction (0-1)
+    const moonPhaseValue = moonPhasePercentage / 100;
 
     return json({
       moonPhase: moonPhaseValue,
-      description: timeData[0]?.moonphase?.desc || "Unknown",
+      description: `${moonPhasePercentage.toFixed(1)}% illuminated`,
     });
   } catch (error) {
     console.error("Moon phase API error:", error);
