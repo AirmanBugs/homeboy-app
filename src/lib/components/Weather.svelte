@@ -60,6 +60,13 @@
     }).format(value);
   };
 
+  // Format day name from date string
+  const getDayName = (dateString: string): string => {
+    const date = new Date(dateString);
+    const locale = currentLang === "no" ? "nb-NO" : "en-US";
+    return date.toLocaleDateString(locale, { weekday: 'short' });
+  };
+
   // Get wind arrow color based on wind speed (Beaufort scale approximation)
   const getWindColor = (windSpeed: number): string => {
     if (windSpeed < 2) return "text-slate-500"; // Calm
@@ -468,7 +475,7 @@
       <RadarMap />
     </div>
 
-    <!-- Forecast -->
+    <!-- Hourly Forecast -->
     <div class="flex gap-2 overflow-x-auto pb-1">
       {#each weatherData.forecast.slice(0, 6) as hour}
         <div
@@ -511,6 +518,57 @@
             <div class="text-xs text-blue-300 flex items-center gap-0.5">
               <WeatherIcon icon="raindrop" size={12} />{formatNumber(
                 hour.precipitation,
+                1
+              )}
+            </div>
+          {/if}
+        </div>
+      {/each}
+    </div>
+
+    <!-- Daily Forecast -->
+    <div class="flex gap-2 overflow-x-auto pb-1">
+      {#each weatherData.dailyForecast as day}
+        <div
+          class="flex flex-col items-center min-w-[56px] cursor-help"
+          title={currentLang === "en"
+            ? `${getDayName(day.time)} - ${Math.round(day.temperature)}°C, Wind: ${formatNumber(day.windSpeed, 1)}m/s${day.precipitation > 0 ? `, Rain: ${formatNumber(day.precipitation, 1)}mm` : ""}`
+            : `${getDayName(day.time)} - ${Math.round(day.temperature)}°C, Vind: ${formatNumber(day.windSpeed, 1)}m/s${day.precipitation > 0 ? `, Regn: ${formatNumber(day.precipitation, 1)}mm` : ""}`}
+        >
+          <div class="text-xs text-slate-400">
+            {getDayName(day.time)}
+          </div>
+          <WeatherIcon icon={getWeatherIconName(day.symbolCode)} size={32} />
+          <div
+            class="text-sm font-semibold bg-gradient-to-br {getTempColor(
+              day.temperature
+            )} bg-clip-text text-transparent"
+          >
+            {Math.round(day.temperature)}°
+          </div>
+          <div class="flex items-center gap-0.5 text-xs text-slate-400">
+            <div class="relative">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-5 w-5"
+                fill="currentColor"
+                viewBox="0 0 24 24"
+                style="transform: rotate({day.windDirection + 180}deg)"
+              >
+                <path d="M12 3l-5 5h3v10h4V8h3z" />
+              </svg>
+              <span
+                class="absolute -bottom-1 -right-1 text-[9px] font-bold text-white bg-slate-800/80 rounded-full px-0.5"
+              >
+                {getBeaufortNumber(day.windSpeed)}
+              </span>
+            </div>
+            <span class="ml-0.5">{formatNumber(day.windSpeed, 1)}</span>
+          </div>
+          {#if day.precipitation > 0}
+            <div class="text-xs text-blue-300 flex items-center gap-0.5">
+              <WeatherIcon icon="raindrop" size={12} />{formatNumber(
+                day.precipitation,
                 1
               )}
             </div>

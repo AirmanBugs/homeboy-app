@@ -1,7 +1,6 @@
 <script lang="ts">
   import { language } from "$lib/stores/language";
   import { settings } from "$lib/stores/settings";
-  import Weather from "./Weather.svelte";
   import WeatherIcon from "./WeatherIcon.svelte";
 
   interface Props {
