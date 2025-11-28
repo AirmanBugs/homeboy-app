@@ -3,6 +3,7 @@
   import Settings from "$lib/components/Settings.svelte";
   import Weather from "$lib/components/Weather.svelte";
   import Calendar from "$lib/components/Calendar.svelte";
+  import Commute from "$lib/components/Commute.svelte";
   import AstroEvent from "$lib/components/AstroEvent.svelte";
   import WeatherIcon from "$lib/components/WeatherIcon.svelte";
   import { language } from "$lib/stores/language";
@@ -484,7 +485,7 @@
         </div>
       </div>
 
-      <!-- Commute widget placeholder -->
+      <!-- Commute widget -->
       <div
         class="bg-slate-800/50 backdrop-blur rounded-2xl p-4 md:p-6 border border-slate-700 flex flex-col min-h-0"
       >
@@ -494,7 +495,9 @@
           <span>🚇</span>
           {t(currentLang, "commuteInfo")}
         </h2>
-        <p class="text-slate-400">{t(currentLang, "transitComingSoon")}</p>
+        <div>
+          <Commute />
+        </div>
       </div>
     </div>
   </div>
