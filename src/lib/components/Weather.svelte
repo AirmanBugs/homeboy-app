@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { WeatherData } from "$lib/types/weather";
   import { language } from "$lib/stores/language";
+  import { location } from "$lib/stores/location";
   import { t } from "$lib/i18n/translations";
   import { onMount } from "svelte";
   import PrecipitationGraph from "./PrecipitationGraph.svelte";
@@ -291,30 +292,18 @@
     }
   };
 
-  const requestLocation = () => {
-    if (!navigator.geolocation) {
-      return;
+  const requestLocation = async () => {
+    try {
+      const loc = await location.requestLocation();
+      usingDefaultLocation = false;
+      fetchWeather(loc.latitude, loc.longitude, true);
+    } catch (err: any) {
+      console.log(
+        "Geolocation unavailable, using default location:",
+        err.message
+      );
+      // Keep using default location, don't show error
     }
-
-    // Try to get actual location in the background
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        usingDefaultLocation = false;
-        fetchWeather(position.coords.latitude, position.coords.longitude, true);
-      },
-      (err) => {
-        console.log(
-          "Geolocation unavailable, using default location:",
-          err.message
-        );
-        // Keep using default location, don't show error
-      },
-      {
-        enableHighAccuracy: false,
-        timeout: 10000,
-        maximumAge: 300000, // Cache for 5 minutes
-      }
-    );
   };
 
   onMount(() => {
