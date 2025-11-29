@@ -1,13 +1,16 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import { dev } from "$app/environment";
   import Settings from "$lib/components/Settings.svelte";
   import Weather from "$lib/components/Weather.svelte";
   import Calendar from "$lib/components/Calendar.svelte";
   import Commute from "$lib/components/Commute.svelte";
   import AstroEvent from "$lib/components/AstroEvent.svelte";
   import WeatherIcon from "$lib/components/WeatherIcon.svelte";
+  import DevTools from "$lib/components/DevTools.svelte";
   import { language } from "$lib/stores/language";
   import { t, translations } from "$lib/i18n/translations";
+  import { isMockEnabled } from "$lib/mocks";
   import type {
     AstroData,
     AstroEvent as AstroEventType,
@@ -18,6 +21,7 @@
   let astroData = $state<AstroData | null>(null);
   let tomorrowAstroData = $state<AstroData | null>(null);
   let yesterdayAstroData = $state<AstroData | null>(null);
+  let mocksEnabled = $state(false);
 
   const currentLang = $derived($language);
 
@@ -188,7 +192,16 @@
 
   // Convert azimuth degrees to compass direction
   const getCompassDirection = (azimuth: number): string => {
-    const directions: Array<keyof typeof translations.en> = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+    const directions: Array<keyof typeof translations.en> = [
+      "N",
+      "NE",
+      "E",
+      "SE",
+      "S",
+      "SW",
+      "W",
+      "NW",
+    ];
     const index = Math.round(azimuth / 45) % 8;
     return t(currentLang, directions[index]);
   };
@@ -330,6 +343,9 @@
     // Fetch astro data on mount
     fetchAstroData();
 
+    // Check if mocks are enabled
+    mocksEnabled = isMockEnabled();
+
     return () => {
       clearInterval(interval);
       if (astroTimeout) {
@@ -360,7 +376,11 @@
 </svelte:head>
 
 <div
-  class="h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white p-4 md:p-6 lg:p-8 overflow-hidden flex flex-col"
+  class="h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white p-4 md:p-6 lg:p-8 overflow-hidden flex flex-col {mocksEnabled
+    ? 'border-2 border-yellow-500'
+    : dev
+      ? 'border-2 border-purple-500'
+      : ''}"
 >
   <div class="max-w-7xl mx-auto w-full flex flex-col h-full">
     <!-- Settings button -->
@@ -425,11 +445,17 @@
             {formattedDate}
           </p>
           {#if dayLengthInfo}
-            <div class="flex items-center justify-center gap-2 text-sm text-slate-400 mt-1">
+            <div
+              class="flex items-center justify-center gap-2 text-sm text-slate-400 mt-1"
+            >
               <WeatherIcon icon="horizon" size={20} />
               <span>{dayLengthInfo.length}</span>
               {#if dayLengthInfo.difference}
-                <span class={dayLengthInfo.diffValue >= 0 ? "text-green-400" : "text-red-400"}>
+                <span
+                  class={dayLengthInfo.diffValue >= 0
+                    ? "text-green-400"
+                    : "text-red-400"}
+                >
                   {dayLengthInfo.difference}
                 </span>
               {/if}
@@ -504,3 +530,7 @@
 </div>
 
 <Settings isOpen={isSettingsOpen} onClose={() => (isSettingsOpen = false)} />
+
+{#if dev}
+  <DevTools />
+{/if}

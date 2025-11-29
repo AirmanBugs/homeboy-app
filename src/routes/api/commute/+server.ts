@@ -5,6 +5,7 @@ import type { CalendarEvent } from "$lib/types/calendar";
 import { google } from "googleapis";
 import { createOAuth2Client, setCredentials } from "$lib/server/google-auth";
 import { GraphQLClient, gql } from "graphql-request";
+import { isMockEnabled, mocks } from "$lib/mocks";
 
 const ENTUR_API_URL = "https://api.entur.io/journey-planner/v3/graphql";
 const ENTUR_GEOCODER_URL = "https://api.entur.io/geocoder/v1/autocomplete";
@@ -35,6 +36,24 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 
     if (isNaN(originLat) || isNaN(originLon)) {
       return json({ error: "Invalid location coordinates" }, { status: 400 });
+    }
+
+    // Return mock data if mocks are enabled
+    const useMocks = cookies.get('useMocks');
+    const calendarScenario = cookies.get('mockCalendarScenario');
+    if (isMockEnabled(useMocks)) {
+      const mockEvents = mocks.calendar(calendarScenario);
+      if (mockEvents.length === 0) {
+        return json(
+          { error: "No upcoming events with locations" },
+          { status: 404 }
+        );
+      }
+
+      const nextEvent = mockEvents[0];
+      const commuteData = mocks.commute(nextEvent);
+
+      return json(commuteData);
     }
 
     let nextEvent: CalendarEvent | undefined;

@@ -4,6 +4,7 @@ import type { CalendarData, CalendarEvent } from '$lib/types/calendar';
 import { google } from 'googleapis';
 import { createOAuth2Client, setCredentials } from '$lib/server/google-auth';
 import { env } from '$env/dynamic/private';
+import { isMockEnabled, mocks } from '$lib/mocks';
 
 // Parse default calendar colors from environment variable
 function parseCalendarColors(): Record<string, string> {
@@ -137,6 +138,22 @@ function mapGoogleColorToLocal(backgroundColor?: string, defaultColor?: string):
 
 export const GET: RequestHandler = async ({ cookies }) => {
 	try {
+		// Return mock data if mocks are enabled
+		const useMocks = cookies.get('useMocks');
+		const calendarScenario = cookies.get('mockCalendarScenario');
+		console.log('[Calendar API] useMocks cookie:', useMocks);
+		console.log('[Calendar API] isMockEnabled result:', isMockEnabled(useMocks));
+		if (isMockEnabled(useMocks)) {
+			console.log('[Calendar API] Returning mock data for scenario:', calendarScenario);
+			const mockEvents = mocks.calendar(calendarScenario);
+			console.log('[Calendar API] Mock events:', mockEvents);
+			const calendarData: CalendarData = {
+				events: mockEvents,
+				updatedAt: new Date().toISOString()
+			};
+			return json(calendarData);
+		}
+
 		const tokensStr = cookies.get('google_tokens');
 
 		if (!tokensStr) {

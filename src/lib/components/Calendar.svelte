@@ -94,9 +94,10 @@
 		let events = calendarData.events;
 
 		// If enabledCalendars is not empty, filter by enabled calendars (using calendar ID)
+		// Skip filtering for mock calendars to always show mock data
 		if (currentSettings.enabledCalendars.length > 0) {
 			events = events.filter(event =>
-				currentSettings.enabledCalendars.includes(event.calendarId)
+				event.calendarId === 'mock-calendar' || currentSettings.enabledCalendars.includes(event.calendarId)
 			);
 		}
 
@@ -173,12 +174,15 @@
 			error = null;
 
 			const response = await fetch('/api/calendar');
+			console.log('[Calendar Component] Response status:', response.status);
 
 			if (!response.ok) {
 				throw new Error('Failed to fetch calendar');
 			}
 
 			calendarData = await response.json();
+			console.log('[Calendar Component] Received data:', calendarData);
+			console.log('[Calendar Component] Number of events:', calendarData?.events?.length);
 			lastFetch = new Date();
 		} catch (err) {
 			if (!silent) {

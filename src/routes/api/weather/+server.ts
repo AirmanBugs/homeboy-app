@@ -5,17 +5,26 @@ import type {
   WeatherData,
   Forecast,
 } from "$lib/types/weather";
+import { isMockEnabled, mocks } from "$lib/mocks";
 
 const USER_AGENT = "HomeBoy/1.0 mariusmbang@gmail.com";
 const MET_API_URL =
   "https://api.met.no/weatherapi/locationforecast/2.0/compact";
 
-export const GET: RequestHandler = async ({ url }) => {
+export const GET: RequestHandler = async ({ url, cookies }) => {
   const lat = url.searchParams.get("lat");
   const lon = url.searchParams.get("lon");
 
   if (!lat || !lon) {
     return json({ error: "Missing lat or lon parameters" }, { status: 400 });
+  }
+
+  // Return mock data if mocks are enabled
+  const useMocks = cookies.get('useMocks');
+  const weatherScenario = cookies.get('mockWeatherScenario');
+  if (isMockEnabled(useMocks)) {
+    const mockData = mocks.weather(parseFloat(lat), parseFloat(lon), weatherScenario);
+    return json(mockData);
   }
 
   try {
