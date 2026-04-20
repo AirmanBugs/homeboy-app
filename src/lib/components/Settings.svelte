@@ -120,6 +120,31 @@
 
 	const nowcastOptions = [60, 90, 120];
 
+	let coordInput = $state(
+		currentSettings.customLocation
+			? `${currentSettings.customLocation.lat}, ${currentSettings.customLocation.lon}`
+			: ''
+	);
+	let coordError = $state('');
+
+	const handleLocationModeChange = (mode: 'browser' | 'custom') => {
+		settings.update(s => ({ ...s, locationMode: mode }));
+	};
+
+	const handleCoordInput = (value: string) => {
+		coordInput = value;
+		coordError = '';
+		const parts = value.split(',').map(s => s.trim());
+		if (parts.length !== 2) return;
+		const lat = parseFloat(parts[0]);
+		const lon = parseFloat(parts[1]);
+		if (isNaN(lat) || isNaN(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+			coordError = currentLang === 'en' ? 'Invalid coordinates' : 'Ugyldige koordinater';
+			return;
+		}
+		settings.update(s => ({ ...s, customLocation: { lat, lon } }));
+	};
+
 	onMount(async () => {
 		await checkAuthStatus();
 		if (isAuthenticated) {
@@ -242,6 +267,51 @@
 							</button>
 						{/each}
 					</div>
+				</div>
+
+				<!-- Location -->
+				<div>
+					<h3 class="text-xl font-semibold mb-4 text-white">
+						{currentLang === 'en' ? 'Location' : 'Sted'}
+					</h3>
+					<div class="flex gap-2 mb-3">
+						<button
+							onclick={() => handleLocationModeChange('custom')}
+							class="flex-1 px-4 py-3 rounded-lg border-2 transition-all {currentSettings.locationMode === 'custom'
+								? 'bg-blue-500/20 border-blue-500 text-white'
+								: 'bg-slate-700/30 border-slate-600 text-slate-300 hover:border-slate-500'}"
+						>
+							{currentLang === 'en' ? 'Fixed location' : 'Fast sted'}
+						</button>
+						<button
+							onclick={() => handleLocationModeChange('browser')}
+							class="flex-1 px-4 py-3 rounded-lg border-2 transition-all {currentSettings.locationMode === 'browser'
+								? 'bg-blue-500/20 border-blue-500 text-white'
+								: 'bg-slate-700/30 border-slate-600 text-slate-300 hover:border-slate-500'}"
+						>
+							{currentLang === 'en' ? 'Browser GPS' : 'Nettleser GPS'}
+						</button>
+					</div>
+					{#if currentSettings.locationMode === 'custom'}
+						<div>
+							<input
+								type="text"
+								value={coordInput}
+								oninput={(e) => handleCoordInput((e.target as HTMLInputElement).value)}
+								placeholder="59.9052, 10.6222"
+								class="w-full px-4 py-3 rounded-lg bg-slate-700/50 border border-slate-600 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-blue-500"
+							/>
+							<p class="text-xs mt-1 {coordError ? 'text-red-400' : 'text-slate-500'}">
+								{#if coordError}
+									{coordError}
+								{:else}
+									{currentLang === 'en'
+										? 'Paste coordinates from Google Maps (right-click → copy)'
+										: 'Lim inn koordinater fra Google Maps (høyreklikk → kopier)'}
+								{/if}
+							</p>
+						</div>
+					{/if}
 				</div>
 
 				<!-- Google Calendar Authentication & Settings -->

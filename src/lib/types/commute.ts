@@ -18,4 +18,6 @@ export interface CommuteStep {
 	instruction: string;
 	duration: number;
 	distance?: number;
+	startTime?: string;
+	toPlace?: string;
 }

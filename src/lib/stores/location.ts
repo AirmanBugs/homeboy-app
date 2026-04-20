@@ -1,5 +1,6 @@
-import { writable } from 'svelte/store';
+import { writable, get } from 'svelte/store';
 import { browser } from '$app/environment';
+import { settings } from './settings';
 
 export interface Location {
 	latitude: number;
@@ -23,6 +24,11 @@ const createLocationStore = () => {
 	let locationRequest: Promise<Location> | null = null;
 
 	const requestLocation = async (): Promise<Location> => {
+		const { locationMode, customLocation } = get(settings);
+		if (locationMode === 'custom' && customLocation) {
+			return { latitude: customLocation.lat, longitude: customLocation.lon, timestamp: Date.now() };
+		}
+
 		// If there's already a request in progress, return it
 		if (locationRequest) {
 			return locationRequest;

@@ -78,11 +78,23 @@ const createRailRoute = (
 	};
 };
 
+const createSimpleRoute = (
+	eventTime: string,
+	duration: number,
+	mode: 'cycling' | 'driving'
+): CommuteRoute => {
+	const arrival = new Date(eventTime);
+	const depart = new Date(arrival.getTime() - duration * 60 * 1000);
+	return { mode, duration, departBy: depart.toISOString(), arrival: arrival.toISOString(), steps: [] };
+};
+
 export const createMockCommuteData = (event: CalendarEvent): CommuteData => {
 	const routes: CommuteRoute[] = [
 		createTransitRoute(event.start, 42, '31', 'Snarøya - Fornebu - Tonsenhagen'),
 		createRailRoute(event.start, 38, 'RE10', 'Drammen - Oslo S - Lillehammer'),
-		createTransitRoute(event.start, 48, '270', 'Asker - Sandvika - Fornebu')
+		createTransitRoute(event.start, 48, '270', 'Asker - Sandvika - Fornebu'),
+		createSimpleRoute(event.start, 25, 'cycling'),
+		createSimpleRoute(event.start, 18, 'driving'),
 	];
 
 	return {

@@ -2,6 +2,7 @@
   import type { CommuteData } from "$lib/types/commute";
   import { language } from "$lib/stores/language";
   import { location } from "$lib/stores/location";
+  import { settings } from "$lib/stores/settings";
   import { onMount } from "svelte";
 
   let commuteData = $state<CommuteData | null>(null);
@@ -128,7 +129,7 @@
     </div>
 
     <!-- Routes -->
-    {#if commuteData.routes.length > 0}
+    {#if commuteData.routes && commuteData.routes.length > 0}
       <div class="flex flex-col gap-2">
         {#each commuteData.routes as route}
           <div
@@ -179,22 +180,38 @@
                         🚇
                       {/if}
                     </span>
-                    <span class="text-slate-300">{step.instruction}</span>
-                    <span class="text-slate-500 ml-auto">{step.duration}m</span>
+                    <span class="text-slate-500 shrink-0">
+                      {#if step.startTime}
+                        {new Date(step.startTime).toLocaleTimeString("nb-NO", { hour: "2-digit", minute: "2-digit" })}
+                      {/if}
+                    </span>
+                    <span class="text-slate-300">
+                      {step.instruction}
+                      {#if step.toPlace}
+                        <span class="text-slate-500"> → {step.toPlace}</span>
+                      {/if}
+                    </span>
+                    <span class="text-slate-500 ml-auto shrink-0">{step.duration}m</span>
                   </div>
                 {/each}
               </div>
             {/if}
 
             <div class="text-xs text-slate-500">
-              {currentLang === "en" ? "Arrive" : "Ankomst"}:
-              {new Date(route.arrival).toLocaleTimeString("nb-NO", {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
+              {#if route.mode === "driving" || route.mode === "cycling"}
+                {currentLang === "en" ? "Depart" : "Avgang"}:
+                {new Date(route.departBy).toLocaleTimeString("nb-NO", { hour: "2-digit", minute: "2-digit" })}
+              {:else}
+                {currentLang === "en" ? "Arrive" : "Ankomst"}:
+                {new Date(route.arrival).toLocaleTimeString("nb-NO", { hour: "2-digit", minute: "2-digit" })}
+              {/if}
             </div>
           </div>
         {/each}
+      </div>
+    {:else}
+      <div class="text-xs text-slate-500">
+        {currentLang === "en" ? "No transit routes found" : "Fant ingen ruteforslag"}
       </div>
     {/if}
   </div>

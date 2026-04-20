@@ -16,8 +16,6 @@ const enturClient = new GraphQLClient(ENTUR_API_URL, {
   },
 });
 
-const USE_TEST_EVENT = true; // Set to false to use real calendar events
-
 export const GET: RequestHandler = async ({ url, cookies }) => {
   try {
     // Get origin coordinates from query parameters
@@ -43,137 +41,107 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
     const calendarScenario = cookies.get('mockCalendarScenario');
     if (isMockEnabled(useMocks)) {
       const mockEvents = mocks.calendar(calendarScenario);
-      if (mockEvents.length === 0) {
-        return json(
-          { error: "No upcoming events with locations" },
-          { status: 404 }
-        );
-      }
-
-      const nextEvent = mockEvents[0];
-      const commuteData = mocks.commute(nextEvent);
-
-      return json(commuteData);
-    }
-
-    let nextEvent: CalendarEvent | undefined;
-
-    if (USE_TEST_EVENT) {
-      // Use a test event in the near future at a known location
-      // Create tomorrow at 15:00 Norwegian time
-      const now = new Date();
-      const tomorrow = new Date(now);
-      tomorrow.setDate(now.getDate() + 1);
-
-      // Format as ISO string with Norwegian timezone
-      const year = tomorrow.getFullYear();
-      const month = String(tomorrow.getMonth() + 1).padStart(2, "0");
-      const day = String(tomorrow.getDate()).padStart(2, "0");
-      const startTime = `${year}-${month}-${day}T15:00:00+01:00`;
-      const endTime = `${year}-${month}-${day}T17:00:00+01:00`;
-
-      nextEvent = {
-        id: "test-event",
-        summary: "Test Event at Asker",
-        start: startTime,
-        end: endTime,
-        location: "Asker stasjon, Asker, Norway",
-        isAllDay: false,
-        calendarId: "test",
-        calendarName: "Test Calendar",
-        calendarColor: "#4285f4",
-      };
-
-      console.log("Using test event:", nextEvent);
-    } else {
-      // Get calendar events
-      const tokensStr = cookies.get("google_tokens");
-      if (!tokensStr) {
-        return json({ error: "Not authenticated" }, { status: 401 });
-      }
-
-      const tokens = JSON.parse(tokensStr);
-      const oauth2Client = createOAuth2Client();
-      setCredentials(oauth2Client, tokens);
-
-      const calendar = google.calendar({ version: "v3", auth: oauth2Client });
-      const calendarList = await calendar.calendarList.list({
-        showHidden: true,
-      });
-      const calendars = calendarList.data.items || [];
-
-      const now = new Date().toISOString();
-      const allEvents: CalendarEvent[] = [];
-
-      // Fetch events from each calendar
-      await Promise.all(
-        calendars.map(async (cal) => {
-          if (!cal.id) return;
-
-          try {
-            const eventsResponse = await calendar.events.list({
-              calendarId: cal.id,
-              timeMin: now,
-              maxResults: 10,
-              singleEvents: true,
-              orderBy: "startTime",
-            });
-
-            const events = eventsResponse.data.items || [];
-
-            for (const event of events) {
-              if (!event.start || !event.end || !event.location) continue;
-
-              const startDate = event.start.dateTime || event.start.date;
-              const endDate = event.end.dateTime || event.end.date;
-              if (!startDate || !endDate) continue;
-
-              allEvents.push({
-                id: event.id || "",
-                summary: event.summary || "Untitled Event",
-                description: event.description || undefined,
-                start: startDate,
-                end: endDate,
-                location: event.location,
-                isAllDay: !event.start.dateTime,
-                calendarId: cal.id,
-                calendarName: cal.summary || "Unnamed Calendar",
-                calendarColor: cal.backgroundColor || "#4285f4",
-              });
-            }
-          } catch (error) {
-            console.error(
-              `Error fetching events from calendar ${cal.summary}:`,
-              error
-            );
-          }
-        })
-      );
-
-      // Sort by start time and find next event with location
-      allEvents.sort(
-        (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime()
-      );
-      nextEvent = allEvents.find((event) => event.location);
-
+      const nextEvent = mockEvents.find((e) => e.location);
       if (!nextEvent) {
         return json(
           { error: "No upcoming events with locations" },
           { status: 404 }
         );
       }
+      return json(mocks.commute(nextEvent));
     }
 
-    // Get routes using Entur Journey Planner API
-    const routes = await getEnturRoutes(
-      originLat,
-      originLon,
-      nextEvent.location,
-      new Date(nextEvent.start)
+    const tokensStr = cookies.get("google_tokens");
+    if (!tokensStr) {
+      return json({ error: "Not authenticated" }, { status: 401 });
+    }
+
+    const tokens = JSON.parse(tokensStr);
+    const oauth2Client = createOAuth2Client();
+    setCredentials(oauth2Client, tokens);
+
+    const calendar = google.calendar({ version: "v3", auth: oauth2Client });
+    const calendarList = await calendar.calendarList.list({
+      showHidden: true,
+    });
+    const calendars = calendarList.data.items || [];
+
+    const now = new Date().toISOString();
+    const allEvents: CalendarEvent[] = [];
+
+    await Promise.all(
+      calendars.map(async (cal) => {
+        if (!cal.id) return;
+
+        try {
+          const eventsResponse = await calendar.events.list({
+            calendarId: cal.id,
+            timeMin: now,
+            maxResults: 10,
+            singleEvents: true,
+            orderBy: "startTime",
+          });
+
+          const events = eventsResponse.data.items || [];
+
+          for (const event of events) {
+            if (!event.start || !event.end || !event.location) continue;
+
+            const startDate = event.start.dateTime || event.start.date;
+            const endDate = event.end.dateTime || event.end.date;
+            if (!startDate || !endDate) continue;
+
+            allEvents.push({
+              id: event.id || "",
+              summary: event.summary || "Untitled Event",
+              description: event.description || undefined,
+              start: startDate,
+              end: endDate,
+              location: event.location,
+              isAllDay: !event.start.dateTime,
+              calendarId: cal.id,
+              calendarName: cal.summary || "Unnamed Calendar",
+              calendarColor: cal.backgroundColor || "#4285f4",
+            });
+          }
+        } catch (error) {
+          console.error(
+            `Error fetching events from calendar ${cal.summary}:`,
+            error
+          );
+        }
+      })
     );
 
+    allEvents.sort(
+      (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime()
+    );
+    const nextEvent = allEvents.find((event) => event.location);
+
+    if (!nextEvent) {
+      return json(
+        { error: "No upcoming events with locations" },
+        { status: 404 }
+      );
+    }
+
+    const arrivalTime = new Date(nextEvent.start);
+    const destCoords = await geocodeAddress(nextEvent.location!);
+
+    const [transitRoutes, cyclingRoute, drivingRoute] = await Promise.all([
+      destCoords ? getEnturRoutes(originLat, originLon, destCoords, arrivalTime) : [],
+      destCoords ? getOSRMRoute(originLat, originLon, destCoords, 'cycling', arrivalTime) : null,
+      destCoords ? getOSRMRoute(originLat, originLon, destCoords, 'driving', arrivalTime) : null,
+    ]);
+
+    const routes: CommuteRoute[] = [
+      ...transitRoutes,
+      ...(cyclingRoute ? [cyclingRoute] : []),
+      ...(drivingRoute ? [drivingRoute] : []),
+    ];
+
     const commuteData: CommuteData = {
-      destination: nextEvent.location,
+      destination: nextEvent.location!,
       departureTime: nextEvent.start,
       routes,
       eventSummary: nextEvent.summary,
@@ -296,20 +264,47 @@ async function geocodeAddress(
   }
 }
 
+async function getOSRMRoute(
+  originLat: number,
+  originLon: number,
+  destCoords: { lat: number; lon: number },
+  profile: 'cycling' | 'driving',
+  arrivalTime: Date
+): Promise<CommuteRoute | null> {
+  try {
+    const osrmBase = profile === 'driving'
+      ? 'https://routing.openstreetmap.de/routed-car'
+      : 'https://routing.openstreetmap.de/routed-bike';
+    const url = `${osrmBase}/route/v1/driving/${originLon},${originLat};${destCoords.lon},${destCoords.lat}?overview=false`;
+    const response = await fetch(url, { headers: { 'User-Agent': 'homeboy' } });
+    if (!response.ok) return null;
+    const data = await response.json();
+    if (!data.routes?.length) return null;
+
+    const durationSeconds: number = data.routes[0].duration;
+    const durationMinutes = Math.ceil(durationSeconds / 60);
+    const departBy = new Date(arrivalTime.getTime() - durationSeconds * 1000);
+
+    return {
+      mode: profile,
+      duration: durationMinutes,
+      departBy: departBy.toISOString(),
+      arrival: arrivalTime.toISOString(),
+      steps: [],
+    };
+  } catch (error) {
+    console.error(`OSRM ${profile} route error:`, error);
+    return null;
+  }
+}
+
 async function getEnturRoutes(
   originLat: number,
   originLon: number,
-  destinationAddress: string,
+  destCoords: { lat: number; lon: number },
   arrivalTime: Date
 ): Promise<CommuteRoute[]> {
   try {
-    // First, geocode the destination address
-    const destCoords = await geocodeAddress(destinationAddress);
-    if (!destCoords) {
-      console.warn("Could not geocode destination:", destinationAddress);
-      return [];
-    }
-
     // GraphQL query for trip planning
     const query = gql`
       query TripQuery(
@@ -331,6 +326,7 @@ async function getEnturRoutes(
             endTime
             legs {
               mode
+              expectedStartTime
               fromPlace {
                 name
               }
@@ -431,6 +427,8 @@ async function getEnturRoutes(
               ? `${leg.line.publicCode} ${leg.line.name}`
               : `Walk to ${leg.toPlace.name}`,
             duration: Math.ceil(leg.duration / 60),
+            startTime: leg.expectedStartTime,
+            toPlace: leg.line ? leg.toPlace?.name : undefined,
           })),
         };
       }
